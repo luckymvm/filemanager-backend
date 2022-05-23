@@ -23,18 +23,45 @@ export class AuthController {
       maxAge: tokens.refTokenExpTimeInMS,
       httpOnly: true,
     });
-    return res.send({ accessToken: tokens.accessToken });
+    return res.send(this.authService.buildResponse(user, tokens.accessToken));
   }
 
   @UseGuards(JwtGuard)
   @Post('refresh')
-  async refresh(@Req() req: RequestWithUser, @Res() res: Response) {}
+  async refresh(
+    @Req() req: RequestWithUser,
+    @Body('browserId') browserId: string,
+    @Res() res: Response,
+  ) {
+    const user = req.user;
+    const refreshToken = req.cookies.refreshToken;
+    const newTokens = await this.tokenService.updateAccessAndRefreshTokens(user, {
+      refreshToken,
+      browserId,
+    });
+
+    res.cookie('refreshToken', newTokens.refreshToken, {
+      maxAge: newTokens.refTokenExpTimeInMS,
+      httpOnly: true,
+    });
+    return res.send(this.authService.buildResponse(user, newTokens.accessToken));
+  }
 
   @UseGuards(JwtGuard)
-  @Post('refresh')
-  async logout() {}
+  @Post('logout')
+  async logout(@Req() req: RequestWithUser, @Res() res: Response) {
+    await this.tokenService.findAndDeleteRefreshToken(req.cookies.refreshToken);
+    res.cookie('refreshToken', '', {
+      maxAge: 0,
+      httpOnly: true,
+    });
+    return res.send();
+  }
 
   @UseGuards(JwtGuard)
   @Get()
-  getUser(@Req() req: RequestWithUser) {}
+  getUser(@Req() req: RequestWithUser) {
+    const user = req.user;
+    return { username: user.username };
+  }
 }

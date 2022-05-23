@@ -21,8 +21,7 @@ export class TokenService {
   public async getNewAccessAndRefreshTokens(user: User, browserId: string) {
     const deleteOldToken = await this.tokenModel.findOneAndDelete({ browserId });
 
-    const userId = user._id.toString();
-    const accessToken = await this.generateAccessToken(userId);
+    const accessToken = await this.generateAccessToken(user._id.toString());
     const refreshToken = this.generateRefreshToken();
     const refTokenExpTimeInMS = this.refTokenExpiresInMS();
     const saveToDB = {
@@ -37,6 +36,10 @@ export class TokenService {
   }
 
   public async updateAccessAndRefreshTokens(user: User, oldToken: OldtokenData) {
+    if (!oldToken.refreshToken || !oldToken.browserId) {
+      throw new BadRequestException('Refresh token or browserId not provided');
+    }
+
     const findToken = await this.tokenModel.findOne({ refreshToken: oldToken.refreshToken });
     if (!findToken) {
       throw new BadRequestException('Refresh token not found');
@@ -53,8 +56,11 @@ export class TokenService {
     return this.getNewAccessAndRefreshTokens(user, oldToken.browserId);
   }
 
-  private async findAndDeleteRefreshToken(browserId: string) {
-    return this.tokenModel.deleteMany({ browserId });
+  public async findAndDeleteRefreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token not provided');
+    }
+    return this.tokenModel.findOneAndDelete({ refreshToken });
   }
 
   private async saveRefreshToken(token: SaveToken) {

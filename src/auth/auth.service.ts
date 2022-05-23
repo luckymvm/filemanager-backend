@@ -3,6 +3,7 @@ import { SignIn } from './dtos/signIn';
 import { isEmail } from 'class-validator';
 import { compare } from 'bcrypt';
 import { UserService } from 'src/user/user.service';
+import { User } from '../user/user.schema';
 
 @Injectable()
 export class AuthService {
@@ -23,5 +24,12 @@ export class AuthService {
     if (!comparePasswords) throw new BadRequestException('Wrong username or password');
 
     return findUser;
+  }
+
+  buildResponse(user: User, accessToken: string) {
+    return {
+      username: user.username,
+      accessToken,
+    };
   }
 }
