@@ -10,4 +10,8 @@ export class SignIn {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  browserId: string;
 }
