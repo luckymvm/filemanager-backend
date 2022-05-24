@@ -7,8 +7,8 @@ import ms from '../../helpers/ms';
 import { InjectModel } from '@nestjs/mongoose';
 import { Token, TokenDocument } from './token.schema';
 import { Model } from 'mongoose';
-import { SaveToken } from './dtos/saveToken';
-import { OldtokenData } from './dtos/oldtokenData';
+import { SaveToken } from './dto/saveToken';
+import { OldtokenData } from './dto/oldtokenData';
 
 @Injectable()
 export class TokenService {

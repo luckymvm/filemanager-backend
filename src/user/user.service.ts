@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './user.schema';
 import { Model } from 'mongoose';
-import { CreateUser } from './dtos/createUser';
+import { CreateUser } from './dto/createUser';
 import { compare, hash } from 'bcrypt';
 
 @Injectable()

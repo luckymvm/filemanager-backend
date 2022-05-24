@@ -2,10 +2,10 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
-import { LocalGuard } from './guards/local.guard';
-import { JwtGuard } from './guards/jwt.guard';
-import { RequestWithUser } from './dtos/requestWithUser';
-import { SignIn } from './dtos/signIn';
+import { LocalGuard } from './guard/local.guard';
+import { JwtGuard } from './guard/jwt.guard';
+import { RequestWithUser } from './dto/requestWithUser';
+import { SignIn } from './dto/signIn';
 
 @Controller('auth')
 export class AuthController {

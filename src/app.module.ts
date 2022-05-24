@@ -5,9 +5,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './user/user.module';
 import { TokenModule } from './token/token.module';
 import { ConfigModule } from '@nestjs/config';
+import { FileModule } from './file/file.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, UserModule, TokenModule, ConfigModule.forRoot()],
+  imports: [DatabaseModule, AuthModule, UserModule, TokenModule, ConfigModule.forRoot(), FileModule],
   controllers: [],
   providers: [],
 })
