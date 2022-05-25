@@ -11,8 +11,8 @@ export class Token {
   @Transform(({ value }) => value.toString())
   public _id: ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
-  public userId: User;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: User.name })
+  public owner: User;
 
   @Prop()
   public refreshToken: string;

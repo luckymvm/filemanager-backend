@@ -67,7 +67,7 @@ export class FileService {
   }
 
   public async getAllUserFiles(userId: ObjectId): Promise<UserFiles[]> {
-    const files = await this.fileModel.find({ owner: userId });
+    const files = await this.fileModel.find({ owner: userId }).sort({ uploadedAt: -1 });
     return this.buildResponse(files);
   }
 

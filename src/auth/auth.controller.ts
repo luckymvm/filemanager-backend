@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { LocalGuard } from './guard/local.guard';
@@ -16,26 +16,28 @@ export class AuthController {
 
   @UseGuards(LocalGuard)
   @Post('login')
-  async login(@Req() req: RequestWithUser, @Body() signIn: SignIn, @Res() res: Response) {
-    const user = req.user;
-    const tokens = await this.tokenService.getNewAccessAndRefreshTokens(user, signIn.browserId);
+  async login(
+    @Req() req: RequestWithUser,
+    @Body() signIn: SignIn,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userId = req.user._id.toString();
+    const tokens = await this.tokenService.getNewAccessAndRefreshTokens(signIn.browserId, userId);
     res.cookie('refreshToken', tokens.refreshToken, {
       maxAge: tokens.refTokenExpTimeInMS,
       httpOnly: true,
     });
-    return res.send(this.authService.buildResponse(user, tokens.accessToken));
+    return this.authService.buildResponse(req.user, tokens.accessToken);
   }
 
-  @UseGuards(JwtGuard)
   @Post('refresh')
   async refresh(
-    @Req() req: RequestWithUser,
+    @Req() req: Request,
     @Body('browserId') browserId: string,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    const user = req.user;
     const refreshToken = req.cookies.refreshToken;
-    const newTokens = await this.tokenService.updateAccessAndRefreshTokens(user, {
+    const newTokens = await this.tokenService.updateAccessAndRefreshTokens({
       refreshToken,
       browserId,
     });
@@ -44,7 +46,7 @@ export class AuthController {
       maxAge: newTokens.refTokenExpTimeInMS,
       httpOnly: true,
     });
-    return res.send(this.authService.buildResponse(user, newTokens.accessToken));
+    return { accessToken: newTokens.accessToken };
   }
 
   @UseGuards(JwtGuard)

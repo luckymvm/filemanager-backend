@@ -20,7 +20,7 @@ export class UserService {
     }
   }
 
-  async findOne(cond) {
+  async findOne(cond): Promise<User | null> {
     const findOne = await this.userModel.findOne(cond);
     return findOne;
   }

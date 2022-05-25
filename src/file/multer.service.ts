@@ -5,7 +5,8 @@ import { RequestWithUser } from '../auth/dto/requestWithUser';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
+import { existsSync } from 'fs';
+import { mkdir } from 'fs/promises';
 
 @Injectable()
 export class MulterService implements MulterOptionsFactory {
@@ -17,6 +18,10 @@ export class MulterService implements MulterOptionsFactory {
         destination: this.destination,
         filename: this.filename,
       }),
+      limits: {
+        fieldSize: 6233689215,
+        fileSize: 6233689215,
+      },
     };
   }
 
@@ -27,9 +32,9 @@ export class MulterService implements MulterOptionsFactory {
   ) {
     const ownerId = req.user._id.toString();
     const path = `./files/${ownerId}`;
-    const pathExist = fs.existsSync(path);
+    const pathExist = existsSync(path);
     if (!pathExist) {
-      await fs.mkdir(path, (e) => console.log(e));
+      await mkdir(path);
     }
     callback(null, path);
   }
