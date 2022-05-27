@@ -4,7 +4,7 @@ import { Model, ObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { SaveFile } from './dto/saveFile';
 import { createHash } from 'crypto';
-import { createReadStream, readFile, readFileSync, unlink } from 'fs';
+import { createReadStream, readFile, readFileSync, ReadStream, unlink } from 'fs';
 import { DownloadFile } from './dto/downloadFile';
 import { UserFiles } from './interface/userFiles';
 import { GetFile } from './interface/getFile';
@@ -16,17 +16,15 @@ export class FileService {
   public async pushFilesToDB(files: Express.Multer.File[], userId: ObjectId): Promise<UserFiles[]> {
     let fileList = [];
     for (const file of files) {
-      const fileBuffer = readFileSync(file.path);
-      const hash = createHash('md5');
-      hash.update(fileBuffer);
-      const md5 = hash.digest('hex');
+      const md5 = await this.getFileHash(file.path);
+      const { originalname: fileName, path, size, mimetype } = file;
 
       let savedFile = await this.saveModel({
+        fileName,
+        path,
+        size,
+        mimetype,
         owner: userId,
-        fileName: file.originalname,
-        path: file.path,
-        size: file.size,
-        mimetype: file.mimetype,
         hash: md5,
         uploadedAt: new Date(),
       });
@@ -44,13 +42,17 @@ export class FileService {
     } else if (downloadFile.userId !== foundFile.owner.toString()) {
       throw new BadRequestException('Permission denied');
     }
-    const readedStream = createReadStream(foundFile.path);
-    const streamableFile = new StreamableFile(readedStream);
-
-    return {
-      streamableFile,
-      fileName: foundFile.fileName,
-    };
+    try {
+      const readStream = await createReadStream(foundFile.path);
+      const streamableFile = new StreamableFile(readStream);
+      return {
+        streamableFile,
+        size: foundFile.size,
+        fileName: foundFile.fileName,
+      };
+    } catch (e) {
+      throw new BadRequestException('File not found');
+    }
   }
 
   public async delete(userId: string, fileId: string) {
@@ -89,6 +91,23 @@ export class FileService {
       const saveToDB = await createModel.save();
       return saveToDB;
     } catch (e) {}
+  }
+
+  private getFileHash(path: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const fileBuffer = createReadStream(path);
+      const hash = createHash('md5');
+      fileBuffer.on('data', (chunk) => hash.update(chunk));
+      fileBuffer.on('end', () => resolve(hash.digest('hex')));
+    });
+  }
+
+  private readFile(path: string): Promise<ReadStream> {
+    return new Promise((resolve, reject) => {
+      const stream = createReadStream(path);
+      stream.on('error', (e) => reject(e));
+      stream.on('end', () => resolve(stream));
+    });
   }
 
   private buildResponse(files: File[]): UserFiles[] {

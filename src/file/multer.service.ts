@@ -18,10 +18,6 @@ export class MulterService implements MulterOptionsFactory {
         destination: this.destination,
         filename: this.filename,
       }),
-      limits: {
-        fieldSize: 6233689215,
-        fileSize: 6233689215,
-      },
     };
   }
 
@@ -31,12 +27,14 @@ export class MulterService implements MulterOptionsFactory {
     callback: (error: Error | null, path: string) => void,
   ) {
     const ownerId = req.user._id.toString();
-    const path = `./files/${ownerId}`;
-    const pathExist = existsSync(path);
-    if (!pathExist) {
-      await mkdir(path);
+    const paths = ['files', 'files/' + ownerId];
+    for (const path of paths) {
+      const pathExist = existsSync(path);
+      if (!pathExist) {
+        await mkdir(path);
+      }
     }
-    callback(null, path);
+    callback(null, paths[1]);
   }
 
   filename(

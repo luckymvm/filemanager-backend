@@ -16,7 +16,6 @@ import { JwtGuard } from '../auth/guard/jwt.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
 import { Response } from 'express';
-import { createReadStream } from 'fs';
 import { UserFiles } from './interface/userFiles';
 
 @Controller('file')
@@ -43,7 +42,10 @@ export class FileController {
   ): Promise<StreamableFile> {
     const userId = req.user._id.toString();
     const file = await this.fileService.getFile({ userId, fileId });
-    res.set({ 'Content-Disposition': `attachment; filename="${file.fileName}"` });
+    res.set({
+      'Content-Disposition': `attachment; filename="${file.fileName}"`,
+      'Content-Length': file.size,
+    });
     return file.streamableFile;
   }
 
