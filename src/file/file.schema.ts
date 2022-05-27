@@ -1,8 +1,9 @@
-import { Document, ObjectId } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, ObjectId } from 'mongoose';
 import { Transform, Type } from 'class-transformer';
-import { User } from '../user/user.schema';
 import * as mongoose from 'mongoose';
+
+import { User } from '../user/user.schema';
 
 export type FileDocument = File & Document;
 

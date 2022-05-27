@@ -1,12 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { User } from '../user/user.schema';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import ms from '../../helpers/ms';
 import { InjectModel } from '@nestjs/mongoose';
-import { Token, TokenDocument } from './token.schema';
 import { Model } from 'mongoose';
+import { randomUUID } from 'crypto';
+
+import ms from '../../helpers/ms';
+import { Token, TokenDocument } from './token.schema';
 import { SaveToken } from './dto/saveToken';
 import { OldtokenData } from './dto/oldtokenData';
 import { NewTokens } from './interface/newTokens';

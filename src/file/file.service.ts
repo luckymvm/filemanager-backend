@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, StreamableFile } from '@nestjs/common';
-import { File, FileDocument } from './file.schema';
-import { Model, ObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { SaveFile } from './dto/saveFile';
+import { Model, ObjectId } from 'mongoose';
+import { createReadStream, unlink } from 'fs';
 import { createHash } from 'crypto';
-import { createReadStream, readFile, readFileSync, ReadStream, unlink } from 'fs';
+
+import { File, FileDocument } from './file.schema';
+import { SaveFile } from './dto/saveFile';
 import { DownloadFile } from './dto/downloadFile';
 import { UserFiles } from './interface/userFiles';
 import { GetFile } from './interface/getFile';
@@ -62,10 +63,10 @@ export class FileService {
     } else if (userId !== foundFile.owner.toString()) {
       throw new BadRequestException('Permission denied');
     }
-    unlink(foundFile.path, (e) => console.log(e));
-    await this.fileModel.findOneAndDelete({ _id: fileId });
 
-    return { message: 'File successfully deleted' };
+    unlink(foundFile.path, () => {});
+    await this.fileModel.findOneAndDelete({ _id: fileId });
+    return { fileId, message: 'Successfully deleted' };
   }
 
   public async getAllUserFiles(userId: ObjectId): Promise<UserFiles[]> {
@@ -97,16 +98,9 @@ export class FileService {
     return new Promise((resolve, reject) => {
       const fileBuffer = createReadStream(path);
       const hash = createHash('md5');
+      fileBuffer.on('error', (err) => reject(err));
       fileBuffer.on('data', (chunk) => hash.update(chunk));
       fileBuffer.on('end', () => resolve(hash.digest('hex')));
-    });
-  }
-
-  private readFile(path: string): Promise<ReadStream> {
-    return new Promise((resolve, reject) => {
-      const stream = createReadStream(path);
-      stream.on('error', (e) => reject(e));
-      stream.on('end', () => resolve(stream));
     });
   }
 

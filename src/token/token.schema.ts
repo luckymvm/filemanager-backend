@@ -1,8 +1,9 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { Document, ObjectId } from 'mongoose';
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { User } from '../user/user.schema';
 import { Transform } from 'class-transformer';
+
+import { User } from '../user/user.schema';
 
 export type TokenDocument = Token & Document;
 

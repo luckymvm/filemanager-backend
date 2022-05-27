@@ -11,11 +11,12 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
+
 import { RequestWithUser } from '../auth/dto/requestWithUser';
 import { JwtGuard } from '../auth/guard/jwt.guard';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
-import { Response } from 'express';
 import { UserFiles } from './interface/userFiles';
 
 @Controller('file')

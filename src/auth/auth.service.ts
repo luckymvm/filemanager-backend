@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SignIn } from './dto/signIn';
 import { isEmail } from 'class-validator';
 import { compare } from 'bcrypt';
+
+import { SignIn } from './dto/signIn';
 import { UserService } from 'src/user/user.service';
 import { User } from '../user/user.schema';
 

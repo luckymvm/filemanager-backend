@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { MulterModuleOptions, MulterOptionsFactory } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
-import { RequestWithUser } from '../auth/dto/requestWithUser';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
-import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
+
+import { RequestWithUser } from '../auth/dto/requestWithUser';
 
 @Injectable()
 export class MulterService implements MulterOptionsFactory {
@@ -15,7 +16,7 @@ export class MulterService implements MulterOptionsFactory {
   async createMulterOptions(): Promise<MulterModuleOptions> {
     return {
       storage: diskStorage({
-        destination: this.destination,
+        destination: this.destination.bind(this),
         filename: this.filename,
       }),
     };
@@ -27,7 +28,8 @@ export class MulterService implements MulterOptionsFactory {
     callback: (error: Error | null, path: string) => void,
   ) {
     const ownerId = req.user._id.toString();
-    const paths = ['files', 'files/' + ownerId];
+    const filesPath = this.configService.get('FILES_PATH');
+    const paths = [filesPath, `${filesPath}/${ownerId}`];
     for (const path of paths) {
       const pathExist = existsSync(path);
       if (!pathExist) {
