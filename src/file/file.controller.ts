@@ -3,6 +3,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -29,7 +30,7 @@ export class FileController {
   upload(
     @Req() req: RequestWithUser,
     @UploadedFiles() files: Express.Multer.File[],
-  ): Promise<UserFiles[]> {
+  ): Promise<UserFiles[] | UserFiles> {
     const userId = req.user._id;
     return this.fileService.pushFilesToDB(files, userId);
   }
@@ -58,8 +59,16 @@ export class FileController {
   }
 
   @UseGuards(JwtGuard)
+  @Patch('rename/:id')
+  async rename(@Req() req: RequestWithUser, @Param('id') fileId: string) {
+    const userId = req.user._id.toString();
+    const { newFileName } = req.body;
+    return this.fileService.rename(userId, fileId, newFileName);
+  }
+
+  @UseGuards(JwtGuard)
   @Get()
-  getUserFiles(@Req() req: RequestWithUser): Promise<UserFiles[]> {
+  getUserFiles(@Req() req: RequestWithUser): Promise<UserFiles[] | UserFiles> {
     return this.fileService.getAllUserFiles(req.user._id);
   }
 }

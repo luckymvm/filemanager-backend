@@ -14,7 +14,10 @@ import { GetFile } from './interface/getFile';
 export class FileService {
   constructor(@InjectModel(File.name) private fileModel: Model<FileDocument>) {}
 
-  public async pushFilesToDB(files: Express.Multer.File[], userId: ObjectId): Promise<UserFiles[]> {
+  public async pushFilesToDB(
+    files: Express.Multer.File[],
+    userId: ObjectId,
+  ): Promise<UserFiles[] | UserFiles> {
     let fileList = [];
     for (const file of files) {
       const md5 = await this.getFileHash(file.path);
@@ -33,16 +36,13 @@ export class FileService {
       fileList.push(savedFile);
     }
 
-    return this.buildResponse(fileList);
+    return FileService.buildResponse(fileList);
   }
 
   public async getFile(downloadFile: DownloadFile): Promise<GetFile> {
     let foundFile = await this.findFile(downloadFile.fileId);
-    if (!foundFile) {
-      throw new BadRequestException('File not found');
-    } else if (downloadFile.userId !== foundFile.owner.toString()) {
-      throw new BadRequestException('Permission denied');
-    }
+    FileService.accessCheck(foundFile, downloadFile.userId);
+
     try {
       const readStream = await createReadStream(foundFile.path);
       const streamableFile = new StreamableFile(readStream);
@@ -58,25 +58,48 @@ export class FileService {
 
   public async delete(userId: string, fileId: string) {
     const foundFile = await this.findFile(fileId);
-    if (!foundFile) {
-      throw new BadRequestException('File not found');
-    } else if (userId !== foundFile.owner.toString()) {
-      throw new BadRequestException('Permission denied');
-    }
+    FileService.accessCheck(foundFile, userId);
 
     unlink(foundFile.path, () => {});
     await this.fileModel.findOneAndDelete({ _id: fileId });
     return { fileId, message: 'Successfully deleted' };
   }
 
-  public async getAllUserFiles(userId: ObjectId): Promise<UserFiles[]> {
+  public async rename(userId: string, fileId: string, newFileName: string) {
+    if (!newFileName) {
+      throw new BadRequestException('Provide new file name');
+    }
+
+    const foundFile = await this.findFile(fileId);
+    FileService.accessCheck(foundFile, userId);
+    if (foundFile.fileName === newFileName) {
+      throw new BadRequestException('Old and new name are the same');
+    }
+    let renamedFile = await this.fileModel.findOneAndUpdate(
+      { _id: fileId },
+      { fileName: newFileName },
+      { new: true },
+    );
+
+    return FileService.buildResponse(renamedFile);
+  }
+
+  public async getAllUserFiles(userId: ObjectId) {
     const files = await this.fileModel.find({ owner: userId }).sort({ uploadedAt: -1 });
-    return this.buildResponse(files);
+    return FileService.buildResponse(files);
+  }
+
+  private static accessCheck(file: File, userId: string) {
+    if (!file) {
+      throw new BadRequestException('File not found');
+    } else if (userId !== file.owner.toString()) {
+      throw new BadRequestException('Permission denied');
+    }
   }
 
   private async findFile(fileId: string): Promise<File | null> {
     try {
-      const foundFile = await this.fileModel.findOne({ _id: fileId });
+      const foundFile = await this.fileModel.findOne({ _id: fileId }); // not redundant
       return foundFile;
     } catch (e) {
       if (e.name === 'CastError') {
@@ -89,7 +112,7 @@ export class FileService {
   private async saveModel(file: SaveFile) {
     try {
       const createModel = new this.fileModel(file);
-      const saveToDB = await createModel.save();
+      const saveToDB = await createModel.save(); // not redundant
       return saveToDB;
     } catch (e) {}
   }
@@ -104,7 +127,17 @@ export class FileService {
     });
   }
 
-  private buildResponse(files: File[]): UserFiles[] {
+  private static buildResponse(files: File[] | File): UserFiles[] | UserFiles {
+    if (!Array.isArray(files)) {
+      return {
+        fileId: files._id.toString(),
+        fileName: files.fileName,
+        size: files.size,
+        uploadedAt: files.uploadedAt,
+        hash: files.hash,
+      };
+    }
+
     return files.map((file) => ({
       fileId: file._id.toString(),
       fileName: file.fileName,

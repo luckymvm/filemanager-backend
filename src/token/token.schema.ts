@@ -12,7 +12,7 @@ export class Token {
   @Transform(({ value }) => value.toString())
   public _id: ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: User.name })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   public owner: User;
 
   @Prop()
