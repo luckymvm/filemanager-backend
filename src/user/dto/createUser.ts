@@ -10,7 +10,7 @@ export class CreateUser {
   @MinLength(3)
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value.toString())
+  @Transform(({ value }) => value.toLowerCase())
   username: string;
 
   @IsString()

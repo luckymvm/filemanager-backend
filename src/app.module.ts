@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
@@ -15,6 +17,9 @@ import { FileModule } from './file/file.module';
     TokenModule,
     ConfigModule.forRoot(),
     FileModule,
+    // ServeStaticModule.forRoot({
+    //   rootPath: join(__dirname, '../..', 'build'),
+    // }),
   ],
   controllers: [],
   providers: [],

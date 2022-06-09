@@ -3,9 +3,9 @@ import { MulterModuleOptions, MulterOptionsFactory } from '@nestjs/platform-expr
 import { ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { existsSync } from 'fs';
-import { mkdir } from 'fs/promises';
+import { mkdir, unlink } from 'fs/promises';
 
 import { RequestWithUser } from '../auth/dto/requestWithUser';
 
@@ -17,8 +17,11 @@ export class MulterService implements MulterOptionsFactory {
     return {
       storage: diskStorage({
         destination: this.destination.bind(this),
-        filename: this.filename,
+        filename: this.filename.bind(this),
       }),
+      limits: {
+        fileSize: 5368709120,
+      },
     };
   }
 
@@ -44,7 +47,14 @@ export class MulterService implements MulterOptionsFactory {
     file: Express.Multer.File,
     callback: (error: Error | null, filename: string) => void,
   ) {
+    const filesPath = this.configService.get('FILES_PATH');
     const randomName = randomUUID() + extname(file.originalname);
     callback(null, randomName);
+
+    req.on('aborted', () => {
+      const filePath = join(filesPath, req.user._id.toString(), randomName);
+      file.stream.on('end', () => unlink(filePath));
+      file.stream.emit('end');
+    });
   }
 }

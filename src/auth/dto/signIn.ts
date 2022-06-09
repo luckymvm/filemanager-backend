@@ -4,7 +4,7 @@ import { Transform } from 'class-transformer';
 export class SignIn {
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value.toString())
+  @Transform(({ value }) => value.toLowerCase())
   username: string;
 
   @IsString()

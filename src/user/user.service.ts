@@ -17,6 +17,7 @@ export class UserService {
       await newUser.save();
       return { message: 'Successfully registered' };
     } catch (e) {
+      console.log(e);
       throw new BadRequestException('The username or email are taken');
     }
   }

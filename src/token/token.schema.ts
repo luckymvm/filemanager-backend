@@ -9,10 +9,9 @@ export type TokenDocument = Token & Document;
 
 @Schema()
 export class Token {
-  @Transform(({ value }) => value.toString())
   public _id: ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: User.name })
   public owner: User;
 
   @Prop()

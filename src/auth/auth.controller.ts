@@ -22,8 +22,12 @@ export class AuthController {
     @Body() signIn: SignIn,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const userId = req.user._id.toString();
-    const tokens = await this.tokenService.getNewAccessAndRefreshTokens(signIn.browserId, userId);
+    const { _id, username } = req.user;
+    const tokens = await this.tokenService.getNewAccessAndRefreshTokens(
+      signIn.browserId,
+      _id,
+      username,
+    );
     res.cookie('refreshToken', tokens.refreshToken, {
       maxAge: tokens.refTokenExpTimeInMS,
       httpOnly: true,
@@ -37,17 +41,18 @@ export class AuthController {
     @Body('browserId') browserId: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies.refreshToken;
-    const newTokens = await this.tokenService.updateAccessAndRefreshTokens({
-      refreshToken,
-      browserId,
-    });
+    const oldRefreshToken: string = req.cookies.refreshToken;
+    const { accessToken, refreshToken, refTokenExpTimeInMS, username } =
+      await this.tokenService.updateAccessAndRefreshTokens({
+        refreshToken: oldRefreshToken,
+        browserId,
+      });
 
-    res.cookie('refreshToken', newTokens.refreshToken, {
-      maxAge: newTokens.refTokenExpTimeInMS,
+    res.cookie('refreshToken', refreshToken, {
+      maxAge: refTokenExpTimeInMS,
       httpOnly: true,
     });
-    return { accessToken: newTokens.accessToken };
+    return { accessToken, username };
   }
 
   @UseGuards(JwtGuard)

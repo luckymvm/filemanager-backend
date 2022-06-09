@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ObjectId } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 import ms from '../../helpers/ms';
@@ -19,8 +19,12 @@ export class TokenService {
     private readonly configService: ConfigService,
   ) {}
 
-  public async getNewAccessAndRefreshTokens(browserId: string, userId: string): Promise<NewTokens> {
-    const deleteOldToken = await this.tokenModel.findOneAndDelete({ browserId });
+  public async getNewAccessAndRefreshTokens(
+    browserId: string,
+    userId: ObjectId,
+    username: string,
+  ): Promise<NewTokens> {
+    await this.tokenModel.findOneAndDelete({ browserId });
 
     const accessToken = await this.generateAccessToken(userId);
     const refreshToken = this.generateRefreshToken();
@@ -33,28 +37,31 @@ export class TokenService {
     };
     await this.saveRefreshToken(saveToDB);
 
-    return { accessToken, refreshToken, refTokenExpTimeInMS };
+    return { accessToken, refreshToken, refTokenExpTimeInMS, username };
   }
 
   public async updateAccessAndRefreshTokens(oldToken: OldtokenData): Promise<NewTokens> {
-    if (!oldToken.refreshToken || !oldToken.browserId) {
+    if (!oldToken.refreshToken || !oldToken.browserId)
       throw new BadRequestException('Refresh token or browserId not provided');
-    }
 
-    const findToken = await this.tokenModel.findOne({ refreshToken: oldToken.refreshToken });
-    if (!findToken) {
+    const foundToken = await this.tokenModel
+      .findOne({ refreshToken: oldToken.refreshToken })
+      .populate('owner', 'username');
+
+    if (!foundToken?.refreshToken) {
       throw new BadRequestException('Refresh token not found');
-    } else if (findToken.browserId !== oldToken.browserId) {
+    } else if (foundToken.browserId !== oldToken.browserId) {
       await this.tokenModel.findOneAndDelete({ refreshToken: oldToken.refreshToken });
       throw new BadRequestException('Wrong browserId');
     }
 
+    const { expiresIn, owner } = foundToken;
     const nowTime = Math.floor(new Date().getTime() / 1000);
-    if (nowTime >= findToken.expiresIn) {
+    if (nowTime >= expiresIn) {
       throw new BadRequestException('Refresh token expired');
     }
 
-    return this.getNewAccessAndRefreshTokens(oldToken.browserId, findToken.owner.toString());
+    return this.getNewAccessAndRefreshTokens(oldToken.browserId, owner._id, owner.username);
   }
 
   public async findAndDeleteRefreshToken(refreshToken: string) {
@@ -76,8 +83,8 @@ export class TokenService {
     return randomUUID();
   }
 
-  private generateAccessToken(id: string): Promise<string> {
-    return this.jwtService.signAsync({ sub: id });
+  private generateAccessToken(id: ObjectId): Promise<string> {
+    return this.jwtService.signAsync({ sub: id.toString() });
   }
 
   private refTokenExpiresInMS(): number {

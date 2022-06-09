@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, StreamableFile } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
-import { createReadStream, unlink } from 'fs';
+import { createReadStream, read, unlink } from 'fs';
 import { createHash } from 'crypto';
 
 import { File, FileDocument } from './file.schema';
@@ -9,6 +9,7 @@ import { SaveFile } from './dto/saveFile';
 import { DownloadFile } from './dto/downloadFile';
 import { UserFiles } from './interface/userFiles';
 import { GetFile } from './interface/getFile';
+import { Response } from 'express';
 
 @Injectable()
 export class FileService {
@@ -39,21 +40,21 @@ export class FileService {
     return FileService.buildResponse(fileList);
   }
 
-  public async getFile(downloadFile: DownloadFile): Promise<GetFile> {
+  public async getFile(downloadFile: DownloadFile) {
     let foundFile = await this.findFile(downloadFile.fileId);
     FileService.accessCheck(foundFile, downloadFile.userId);
-
-    try {
-      const readStream = await createReadStream(foundFile.path);
-      const streamableFile = new StreamableFile(readStream);
-      return {
-        streamableFile,
-        size: foundFile.size,
-        fileName: foundFile.fileName,
-      };
-    } catch (e) {
-      throw new BadRequestException('File not found');
-    }
+    return foundFile;
+    // try {
+    //   return createReadStream(foundFile.path);
+    // const streamableFile = new StreamableFile(readStream);
+    // return {
+    //   streamableFile,
+    //   size: foundFile.size,
+    //   fileName: foundFile.fileName,
+    // };
+    // } catch (e) {
+    //   throw new BadRequestException('File not found');
+    // }
   }
 
   public async delete(userId: string, fileId: string) {
@@ -84,8 +85,14 @@ export class FileService {
     return FileService.buildResponse(renamedFile);
   }
 
-  public async getAllUserFiles(userId: ObjectId) {
-    const files = await this.fileModel.find({ owner: userId }).sort({ uploadedAt: -1 });
+  public async getAllUserFiles(
+    userId: ObjectId,
+    sortCond: object = { uploadedAt: -1 },
+    searchCond: string,
+  ) {
+    const files = await this.fileModel
+      .find({ owner: userId, fileName: new RegExp(searchCond, 'i') })
+      .sort(sortCond);
     return FileService.buildResponse(files);
   }
 
@@ -124,6 +131,14 @@ export class FileService {
       fileBuffer.on('error', (err) => reject(err));
       fileBuffer.on('data', (chunk) => hash.update(chunk));
       fileBuffer.on('end', () => resolve(hash.digest('hex')));
+    });
+  }
+
+  readStream(path: string): Promise<Buffer | Error> {
+    return new Promise((resolve, reject) => {
+      const stream = createReadStream(path);
+      stream.on('error', (e) => reject(e));
+      stream.on('data', (data) => resolve(data as Buffer));
     });
   }
 

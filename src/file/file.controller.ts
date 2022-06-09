@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   StreamableFile,
@@ -19,6 +20,7 @@ import { RequestWithUser } from '../auth/dto/requestWithUser';
 import { JwtGuard } from '../auth/guard/jwt.guard';
 import { FileService } from './file.service';
 import { UserFiles } from './interface/userFiles';
+import { createReadStream } from 'fs';
 
 @Controller('file')
 export class FileController {
@@ -41,14 +43,19 @@ export class FileController {
     @Req() req: RequestWithUser,
     @Param('id') fileId: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  ) {
     const userId = req.user._id.toString();
     const file = await this.fileService.getFile({ userId, fileId });
+    const stream = createReadStream(file.path);
+    stream.on('error', () => {
+      res.status(400).send({ message: 'File not found' }).end();
+    });
+
     res.set({
       'Content-Disposition': `attachment; filename="${file.fileName}"`,
       'Content-Length': file.size,
     });
-    return file.streamableFile;
+    return new StreamableFile(stream);
   }
 
   @UseGuards(JwtGuard)
@@ -68,7 +75,18 @@ export class FileController {
 
   @UseGuards(JwtGuard)
   @Get()
-  getUserFiles(@Req() req: RequestWithUser): Promise<UserFiles[] | UserFiles> {
-    return this.fileService.getAllUserFiles(req.user._id);
+  getUserFiles(@Req() req: RequestWithUser, @Query() query): Promise<UserFiles[] | UserFiles> {
+    const { searchQuery } = query;
+    delete query.searchQuery;
+    return this.fileService.getAllUserFiles(req.user._id, query, searchQuery);
   }
+
+  // @UseGuards(JwtGuard)
+  // @Get('/:query')
+  // search(
+  //   @Req() req: RequestWithUser,
+  //   @Param('query') query: string,
+  // ): Promise<UserFiles[] | UserFiles> {
+  //   return this.fileService.getFilesByQuery(req.user._id, query);
+  // }
 }
