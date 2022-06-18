@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 import ms from '../../helpers/ms';
 import { Token, TokenDocument } from './token.schema';
 import { SaveToken } from './dto/saveToken';
-import { OldtokenData } from './dto/oldtokenData';
+import { OldRefreshSession } from './dto/oldRefreshSession';
 import { NewTokens } from './interface/newTokens';
 
 @Injectable()
@@ -40,20 +40,15 @@ export class TokenService {
     return { accessToken, refreshToken, refTokenExpTimeInMS, username };
   }
 
-  public async updateAccessAndRefreshTokens(oldToken: OldtokenData): Promise<NewTokens> {
-    if (!oldToken.refreshToken || !oldToken.browserId)
+  public async updateAccessAndRefreshTokens(oldSession: OldRefreshSession): Promise<NewTokens> {
+    if (!oldSession.refreshToken || !oldSession.browserId) {
       throw new BadRequestException('Refresh token or browserId not provided');
+    }
 
     const foundToken = await this.tokenModel
-      .findOne({ refreshToken: oldToken.refreshToken })
+      .findOne({ refreshToken: oldSession.refreshToken })
       .populate('owner', 'username');
-
-    if (!foundToken?.refreshToken) {
-      throw new BadRequestException('Refresh token not found');
-    } else if (foundToken.browserId !== oldToken.browserId) {
-      await this.tokenModel.findOneAndDelete({ refreshToken: oldToken.refreshToken });
-      throw new BadRequestException('Wrong browserId');
-    }
+    await this.validateFoundSession(foundToken, oldSession);
 
     const { expiresIn, owner } = foundToken;
     const nowTime = Math.floor(new Date().getTime() / 1000);
@@ -61,7 +56,7 @@ export class TokenService {
       throw new BadRequestException('Refresh token expired');
     }
 
-    return this.getNewAccessAndRefreshTokens(oldToken.browserId, owner._id, owner.username);
+    return this.getNewAccessAndRefreshTokens(oldSession.browserId, owner._id, owner.username);
   }
 
   public async findAndDeleteRefreshToken(refreshToken: string) {
@@ -69,6 +64,15 @@ export class TokenService {
       throw new BadRequestException('Refresh token not provided');
     }
     return this.tokenModel.findOneAndDelete({ refreshToken });
+  }
+
+  private async validateFoundSession(tokenFromDB: Token, oldSession: OldRefreshSession) {
+    if (!tokenFromDB) {
+      throw new BadRequestException('Refresh token not found');
+    } else if (tokenFromDB.browserId !== oldSession.browserId) {
+      await this.tokenModel.findOneAndDelete({ refreshToken: oldSession.refreshToken });
+      throw new BadRequestException('Wrong browserId');
+    }
   }
 
   private async saveRefreshToken(token: SaveToken): Promise<Token> {

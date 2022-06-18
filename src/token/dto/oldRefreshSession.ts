@@ -1,6 +1,6 @@
 import { IsNotEmpty } from 'class-validator';
 
-export class OldtokenData {
+export class OldRefreshSession {
   @IsNotEmpty({ message: 'Refresh token not provided' })
   refreshToken: string;
 

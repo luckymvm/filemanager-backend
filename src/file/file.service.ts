@@ -1,15 +1,14 @@
 import { BadRequestException, Injectable, StreamableFile } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
-import { createReadStream, read, unlink } from 'fs';
+import { createReadStream, unlink } from 'fs';
 import { createHash } from 'crypto';
 
 import { File, FileDocument } from './file.schema';
-import { SaveFile } from './dto/saveFile';
-import { DownloadFile } from './dto/downloadFile';
+import { SaveFile } from './interface/saveFile';
+import { DownloadFile } from './interface/downloadFile';
 import { UserFiles } from './interface/userFiles';
-import { GetFile } from './interface/getFile';
-import { Response } from 'express';
+import { Rename } from './interface/rename';
 
 @Injectable()
 export class FileService {
@@ -40,21 +39,10 @@ export class FileService {
     return FileService.buildResponse(fileList);
   }
 
-  public async getFile(downloadFile: DownloadFile) {
+  public async getFile(downloadFile: DownloadFile): Promise<File> {
     let foundFile = await this.findFile(downloadFile.fileId);
     FileService.accessCheck(foundFile, downloadFile.userId);
     return foundFile;
-    // try {
-    //   return createReadStream(foundFile.path);
-    // const streamableFile = new StreamableFile(readStream);
-    // return {
-    //   streamableFile,
-    //   size: foundFile.size,
-    //   fileName: foundFile.fileName,
-    // };
-    // } catch (e) {
-    //   throw new BadRequestException('File not found');
-    // }
   }
 
   public async delete(userId: string, fileId: string) {
@@ -66,13 +54,15 @@ export class FileService {
     return { fileId, message: 'Successfully deleted' };
   }
 
-  public async rename(userId: string, fileId: string, newFileName: string) {
+  public async rename(renamingInfo: Rename) {
+    const { fileId, userId, newFileName } = renamingInfo;
     if (!newFileName) {
       throw new BadRequestException('Provide new file name');
     }
 
     const foundFile = await this.findFile(fileId);
     FileService.accessCheck(foundFile, userId);
+
     if (foundFile.fileName === newFileName) {
       throw new BadRequestException('Old and new name are the same');
     }
@@ -134,31 +124,23 @@ export class FileService {
     });
   }
 
-  readStream(path: string): Promise<Buffer | Error> {
-    return new Promise((resolve, reject) => {
-      const stream = createReadStream(path);
-      stream.on('error', (e) => reject(e));
-      stream.on('data', (data) => resolve(data as Buffer));
-    });
-  }
-
   private static buildResponse(files: File[] | File): UserFiles[] | UserFiles {
-    if (!Array.isArray(files)) {
-      return {
-        fileId: files._id.toString(),
-        fileName: files.fileName,
-        size: files.size,
-        uploadedAt: files.uploadedAt,
-        hash: files.hash,
-      };
+    if (Array.isArray(files)) {
+      return files.map((file) => ({
+        fileId: file._id.toString(),
+        fileName: file.fileName,
+        size: file.size,
+        uploadedAt: file.uploadedAt,
+        hash: file.hash,
+      }));
     }
 
-    return files.map((file) => ({
-      fileId: file._id.toString(),
-      fileName: file.fileName,
-      size: file.size,
-      uploadedAt: file.uploadedAt,
-      hash: file.hash,
-    }));
+    return {
+      fileId: files._id.toString(),
+      fileName: files.fileName,
+      size: files.size,
+      uploadedAt: files.uploadedAt,
+      hash: files.hash,
+    };
   }
 }

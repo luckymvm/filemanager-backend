@@ -17,9 +17,9 @@ import { FileModule } from './file/file.module';
     TokenModule,
     ConfigModule.forRoot(),
     FileModule,
-    // ServeStaticModule.forRoot({
-    //   rootPath: join(__dirname, '../..', 'build'),
-    // }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '../..', 'build'),
+    }),
   ],
   controllers: [],
   providers: [],

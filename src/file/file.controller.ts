@@ -70,7 +70,7 @@ export class FileController {
   async rename(@Req() req: RequestWithUser, @Param('id') fileId: string) {
     const userId = req.user._id.toString();
     const { newFileName } = req.body;
-    return this.fileService.rename(userId, fileId, newFileName);
+    return this.fileService.rename({ userId, fileId, newFileName });
   }
 
   @UseGuards(JwtGuard)
