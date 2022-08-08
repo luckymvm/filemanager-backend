@@ -21,13 +21,14 @@ import { JwtGuard } from '../auth/guard/jwt.guard';
 import { FileService } from './file.service';
 import { UserFiles } from './interface/userFiles';
 import { createReadStream } from 'fs';
+import { JwtAndApiKeyGuard } from '../auth/guard/jwtAndApiKey.guard';
 
 @Controller('file')
+@UseGuards(JwtAndApiKeyGuard)
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
   @UseInterceptors(FilesInterceptor('files'))
-  @UseGuards(JwtGuard)
   @Post('upload')
   upload(
     @Req() req: RequestWithUser,
@@ -37,7 +38,6 @@ export class FileController {
     return this.fileService.pushFilesToDB(files, userId);
   }
 
-  @UseGuards(JwtGuard)
   @Get('download/:id')
   async download(
     @Req() req: RequestWithUser,
@@ -52,20 +52,18 @@ export class FileController {
     });
 
     res.set({
-      'Content-Disposition': `attachment; filename="${file.fileName}"`,
+      'Content-Disposition': `attachment; filename="${encodeURI(file.fileName)}"`,
       'Content-Length': file.size,
     });
     return new StreamableFile(stream);
   }
 
-  @UseGuards(JwtGuard)
   @Delete('delete/:id')
   async delete(@Req() req: RequestWithUser, @Param('id') fileId: string) {
     const userId = req.user._id.toString();
     return this.fileService.delete(userId, fileId);
   }
 
-  @UseGuards(JwtGuard)
   @Patch('rename/:id')
   async rename(@Req() req: RequestWithUser, @Param('id') fileId: string) {
     const userId = req.user._id.toString();
@@ -73,20 +71,10 @@ export class FileController {
     return this.fileService.rename({ userId, fileId, newFileName });
   }
 
-  @UseGuards(JwtGuard)
   @Get()
   getUserFiles(@Req() req: RequestWithUser, @Query() query): Promise<UserFiles[] | UserFiles> {
     const { searchQuery } = query;
     delete query.searchQuery;
     return this.fileService.getAllUserFiles(req.user._id, query, searchQuery);
   }
-
-  // @UseGuards(JwtGuard)
-  // @Get('/:query')
-  // search(
-  //   @Req() req: RequestWithUser,
-  //   @Param('query') query: string,
-  // ): Promise<UserFiles[] | UserFiles> {
-  //   return this.fileService.getFilesByQuery(req.user._id, query);
-  // }
 }

@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { TokenService } from './token.service';
 import { Token, TokenSchema } from './token.schema';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [

@@ -7,6 +7,8 @@ import { FileController } from './file.controller';
 import { FileService } from './file.service';
 import { MulterService } from './multer.service';
 import { File, FileSchema } from './file.schema';
+import { UserModule } from '../user/user.module';
+import { TokenModule } from '../token/token.module';
 
 @Module({
   imports: [
@@ -15,6 +17,9 @@ import { File, FileSchema } from './file.schema';
       imports: [ConfigModule],
       useClass: MulterService,
     }),
+    ConfigModule,
+    UserModule,
+    TokenModule,
   ],
   controllers: [FileController],
   providers: [FileService],

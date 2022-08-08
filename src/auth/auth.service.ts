@@ -11,12 +11,7 @@ export class AuthService {
   constructor(private readonly userService: UserService) {}
 
   async validateUser(cred: Omit<SignIn, 'browserId'>) {
-    let user;
-    if (isEmail(cred.username)) {
-      user = { email: cred.username };
-    } else {
-      user = { username: cred.username };
-    }
+    let user = isEmail(cred.username) ? { email: cred.username } : { username: cred.username };
 
     const findUser = await this.userService.findOne(user);
     if (!findUser) throw new BadRequestException('Wrong username or password');
@@ -30,6 +25,7 @@ export class AuthService {
   buildResponse(user: User, accessToken: string) {
     return {
       username: user.username,
+      email: user.email,
       accessToken,
     };
   }
